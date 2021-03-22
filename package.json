@@ -4,12 +4,12 @@
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.9",
-    "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.8.3",
     "@types/jest": "^26.0.21",
     "@types/node": "^12.20.6",
     "@types/react": "^17.0.3",
-    "@types/react-dom": "^17.0.2",
+    "axios": "^0.21.1",
+    "node-sass": "^5.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-scripts": "4.0.3",
@@ -17,6 +17,7 @@
     "web-vitals": "^1.1.1"
   },
   "scripts": {
+    "install-and-start": "install react-scripts start",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -39,5 +40,15 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@testing-library/react": "^11.2.5",
+    "@types/enzyme": "^3.10.8",
+    "@types/react-dom": "^17.0.2",
+    "@wojtekmaj/enzyme-adapter-react-17": "^0.4.1",
+    "enzyme": "^3.11.0",
+    "jest": "^26.6.0",
+    "jest-dom": "^4.0.0",
+    "ts-jest": "^26.5.4"
   }
 }
