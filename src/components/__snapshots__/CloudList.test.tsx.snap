@@ -1,3 +1,127 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`should render correctly 1`] = `ShallowWrapper {}`;
+exports[`should render correctly when isLoading is true 1`] = `
+<div
+  className="content-wrapper"
+>
+  <p>
+    Loading ....
+  </p>
+</div>
+`;
+
+exports[`should render correctly with cloud selection 1`] = `
+<div
+  className="content-wrapper"
+>
+  <div
+    className="dropdown"
+  >
+    <label
+      htmlFor="cloud"
+    >
+      Select cloud
+    </label>
+    <select
+      id="cloud"
+      name="cloud"
+      onChange={[Function]}
+      value=""
+    >
+      <option
+        value=""
+      >
+        -- select an option --
+      </option>
+      <option
+        value="google"
+      >
+        Google Cloud
+      </option>
+      <option
+        value="azure"
+      >
+        Microsoft Azure
+      </option>
+      <option
+        value="aws"
+      >
+        Amazon Web Services
+      </option>
+    </select>
+  </div>
+  <div
+    className="dropdown"
+  >
+    <label
+      htmlFor="region"
+    >
+      Select region
+    </label>
+    <select
+      id="region"
+      name="region"
+      onChange={[Function]}
+      value=""
+    >
+      <option
+        value=""
+      >
+        -- select an option --
+      </option>
+      <option
+        value="europe"
+      >
+        Europe
+      </option>
+      <option
+        value="east asia"
+      >
+        East Asia
+      </option>
+      <option
+        value="north america"
+      >
+        North America
+      </option>
+    </select>
+  </div>
+  <div
+    className="dropdown"
+  >
+    <label
+      htmlFor="city"
+    >
+      Select city
+      <small>
+        (Listed from nearest to farest)
+      </small>
+    </label>
+    <select
+      id="city"
+      name="city"
+      onChange={[Function]}
+      value=""
+    >
+      <option
+        value="Europe, Finland - Google Cloud: Finland"
+      >
+        Europe, Finland - Google Cloud: Finland
+         * Nearest
+      </option>
+      <option
+        value="Asia, Japan - Azure: Japan East"
+      >
+        Asia, Japan - Azure: Japan East
+        
+      </option>
+      <option
+        value="United States, California - Amazon Web Services: N. California"
+      >
+        United States, California - Amazon Web Services: N. California
+        
+      </option>
+    </select>
+  </div>
+</div>
+`;

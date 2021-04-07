@@ -5,17 +5,34 @@ import { getDistanceFromLatLonInKm } from '../helper/DistanceCalculation'
 import Dropdown from './Dropdown'
 import { Option } from './SharedInterface'
 
-class CloudList extends Component {
+interface ICloudListState {
+  clouds: Cloud[],
+  isLoading: boolean,
+  cloudNameOptions: Option[],
+  regionOptions: Option[],
+  selectedCloud: string,
+  selectedRegion: string,
+  selectedCity: string,
+  filteredItems: Cloud[],
+  location: {
+    lat: number,
+    lon: number
+  }
+}
 
-  state = {
-    clouds: [] as Cloud[],
+export const emptyOption: Option = { value: '', displayName: '-- select an option --' }
+
+class CloudList extends Component<{}, ICloudListState> {
+
+  state: ICloudListState = {
+    clouds: [],
     isLoading: false,
-    cloudNameOptions: [{ value: '', displayName: '' }] as Option[],
-    regionOptions: [{ value: '', displayName: '' }] as Option[],
-    selectedCloud: '' as string,
-    selectedRegion: '' as string,
-    selectedCity: '' as string,
-    filteredItems: [] as Cloud[],
+    cloudNameOptions: [emptyOption],
+    regionOptions: [emptyOption],
+    selectedCloud: '',
+    selectedRegion: '',
+    selectedCity: '',
+    filteredItems: [],
     location: {
       // default to Helsinki's location
       lat: 60.1699,
@@ -30,8 +47,11 @@ class CloudList extends Component {
         .then(res => {
           this.setState({ clouds: res || [], isLoading: false })
           this.setCloudOptions()
+          this.setRegionOptions()
+          // now selectedCloud and selectedRegion are empty, so show all cloud options
+          this.filterCloudByNameAndOrRegion()
         }).catch(() => {
-          // die sliently for now
+          this.setState({ clouds: [], isLoading: false })
         })
     })
 
@@ -44,8 +64,8 @@ class CloudList extends Component {
   }
 
   filterCloudsByName = (name: string): Cloud[] => {
-    const filtered = this.state.clouds.filter(cloud => {
-      return cloud.cloud_name.indexOf(name) > -1
+    const filtered = this.state.clouds.filter((cloud: Cloud) => {
+      return cloud.cloud_name.includes(name)
     })
     return filtered
   }
@@ -59,15 +79,21 @@ class CloudList extends Component {
     const name = this.state.selectedCloud
     const region = this.state.selectedRegion
 
-    const filteredByName = this.filterCloudsByName(name)
-    if(region) {
-      const filteredByNameAndRegion = this.filterCloudByRegion(region, filteredByName)
-      this.setState({ filteredItems: filteredByNameAndRegion }, () => {
-        this.sortDistanceAscen()
-      })
-    } else {
-      this.setState({ filteredItems: filteredByName })
+    // if name only --> filter name 
+    // if region only --> filter region
+    // if name & region -->  filter name then region
+    // if no name & region --> return the whole cloud list from API
+    let filtered = this.state.clouds
+    if(name) {
+      filtered = this.filterCloudsByName(name)
     }
+    if(region) {
+      filtered = this.filterCloudByRegion(region, filtered)
+    }
+
+    this.setState({ filteredItems: filtered }, () => {
+      this.sortDistanceAscen()
+    })
   }
 
   getCloudFullName = (name: string):string => {
@@ -89,28 +115,23 @@ class CloudList extends Component {
 
   setCloudOptions = (): void => {
     if(this.state.clouds.length > 0) {
-      const names = this.state.clouds.map(cloud => cloud.cloud_name.split('-')[0])
+      const names = this.state.clouds.map((cloud: Cloud) => cloud.cloud_name.split('-')[0])
       const uniqueNames = Array.from(new Set(names))
-      const formattedOptions = [] as {[key:string]: string}[]
+      const formattedOptions = [] as Option[]
       uniqueNames.forEach((name) => {
         formattedOptions.push({ value: name, displayName: this.getCloudFullName(name)  })
       })
       this.setState({
-        cloudNameOptions: formattedOptions,
-        // select the first one by default
-        selectedCloud: formattedOptions[0]?.value || ''
-      }, () => {
-        this.setRegionOptionsByCloudName(this.state.selectedCloud)
+        cloudNameOptions: [emptyOption, ...formattedOptions]
       })
     } else {
-      this.setState({ cloudNameOptions: [{ value: '', displayName: '' }]})
+      this.setState({ cloudNameOptions: [emptyOption]})
     }
   }
 
-  setRegionOptionsByCloudName = (cloudName: string): void => {
-    if(cloudName) {
-      const filteredClouds = this.filterCloudsByName(cloudName)
-      const regions = filteredClouds.map(cloud => cloud.geo_region)
+  setRegionOptions = (): void => {
+    if(this.state.clouds.length > 0) {
+      const regions = this.state.clouds.map(cloud => cloud.geo_region)
       const uniqueRegions = Array.from(new Set(regions))
       const formattedOptions = uniqueRegions.map(region => {
         const displayName = region.toLowerCase()
@@ -119,19 +140,15 @@ class CloudList extends Component {
           .join(' ')
         return { value: region, displayName }
       })
-      // Improvement: check if the current selectedRegion also exists in the new region options, then use the same value instead of resetting it to index 0 value
-      // but that might cause some unexpected UX and/or UI ... (TBD)
-      this.setState({ regionOptions: formattedOptions, selectedRegion: formattedOptions[0]?.value || '' }, () => {
-        this.filterCloudByNameAndOrRegion()
-      })
+      this.setState({ regionOptions: [emptyOption, ...formattedOptions] })
     } else {
-      this.setState({ regionOptions: [{ value: '', displayName: '' }] })
+      this.setState({ regionOptions: [emptyOption] })
     }
   }
 
   handleCloudNameChange = (cloudName: string): void => {
     this.setState({ selectedCloud: cloudName }, () => {
-      this.setRegionOptionsByCloudName(this.state.selectedCloud)
+      this.filterCloudByNameAndOrRegion()
     })
   }
 
@@ -141,14 +158,15 @@ class CloudList extends Component {
     })
   }
 
-  handleCityChange = (e: any): void => {
-    this.setState({ selectedCity: e.target.value })
+  handleCityChange = (e: React.SyntheticEvent): void => {
+    const target  = e.target as HTMLSelectElement
+    this.setState({ selectedCity: target.value })
   }
 
   calculateDistances = (): Cloud[] => {
     let filteredList = this.state.filteredItems
     if(filteredList.length > 1) {
-      filteredList.forEach((item, index) => {
+      filteredList.forEach((item: Cloud, index) => {
         filteredList[index].distance = getDistanceFromLatLonInKm(item.geo_latitude, item.geo_longitude, this.state.location.lat, this.state.location.lon)
       })
     }
@@ -164,7 +182,17 @@ class CloudList extends Component {
     this.setState({ filteredItems: sortedData })
   }
 
-  render() {     
+  render() {    
+    const filteredResult = () => {
+      if(this.state.filteredItems.length > 0) {
+        return this.state.filteredItems.map((cloud: Cloud, index: number) =>
+          <option value={cloud.cloud_description} key={cloud.cloud_description + index}>{cloud.cloud_description}{(this.state.filteredItems.length !== 1 && index === 0)? ' * Nearest' : ''}</option>
+        )
+      } else {
+        return <option value=''>No cloud service available with your criteria</option>
+      }
+    }
+    
     const selection = (
       <React.Fragment>
         <Dropdown 
@@ -185,9 +213,7 @@ class CloudList extends Component {
             <small>(Listed from nearest to farest)</small>
           </label>
           <select name="city" id="city" onChange={this.handleCityChange} value={this.state.selectedCity}>
-            {this.state.filteredItems.map((cloud, index) =>
-              <option value={cloud.cloud_description} key={cloud.cloud_description + index}>{cloud.cloud_description}{(this.state.filteredItems.length !== 1 && index === 0)? ' * Nearest' : ''}</option>
-            )}
+            {filteredResult()}
           </select>
         </div>
       </React.Fragment>

@@ -1,9 +1,10 @@
 import { shallow } from 'enzyme';
-import CloudList from './CloudList';
+import CloudList, { emptyOption } from './CloudList';
 import { CloudApi, Cloud } from '../apiclient/CloudApi'
 import * as helper from '../helper/DistanceCalculation'
 import Dropdown from './Dropdown'
 import { getCurrentPositionMock } from '../setupTests'
+import renderer from 'react-test-renderer'
 
 let wrapper: any
 
@@ -53,17 +54,29 @@ afterEach(() => {
   }
 })
 
-test('should render correctly', () => {
-  wrapper = shallow(<CloudList />)
-  expect(wrapper).toMatchSnapshot()
+test('should render correctly when isLoading is true', async () => {
+  const component = shallow<CloudList>(<CloudList />)
+  await component.instance().componentDidMount()
+  component.setState({
+    isLoading: true
+  })
+
+  const tree = renderer.create(component.getElement()).toJSON()
+  expect(tree).toMatchSnapshot()
+})
+
+test('should render correctly with cloud selection', async () => {
+  const tree = renderer.create(<CloudList />)
+  await CloudApi.prototype.getCloudList()
+  expect(tree.toJSON()).toMatchSnapshot()
 })
 
 test('should have correct default state properties', () => {
-  wrapper = shallow(<CloudList />)
-  expect(wrapper.state('isLoading')).toBeFalsy
+  const wrapper = shallow(<CloudList />, { disableLifecycleMethods: true })
+  expect(wrapper.state('isLoading')).toBeFalsy()
   expect(wrapper.state('clouds')).toEqual([])
-  expect(wrapper.state('cloudNameOptions')).toEqual([{ value: '', displayName: '' }])
-  expect(wrapper.state('regionOptions')).toEqual([{ value: '', displayName: '' }])
+  expect(wrapper.state('cloudNameOptions')).toEqual([emptyOption])
+  expect(wrapper.state('regionOptions')).toEqual([emptyOption])
   expect(wrapper.state('selectedCloud')).toEqual('')
   expect(wrapper.state('selectedRegion')).toEqual('')
   expect(wrapper.state('selectedCity')).toEqual('')
@@ -73,14 +86,23 @@ test('should have correct default state properties', () => {
 
 test('should fetch cloud data during componentDidMount hook', async () => {
   wrapper = shallow(<CloudList />)
+  const apiCallSpy = jest.spyOn(CloudApi.prototype, 'getCloudList')
   wrapper.instance().setCloudOptions = jest.fn()
+  wrapper.instance().setRegionOptions = jest.fn()
+  wrapper.instance().filterCloudByNameAndOrRegion = jest.fn()
   wrapper.instance().forceUpdate()
   await wrapper.instance().componentDidMount()
 
-  expect(CloudApi.prototype.getCloudList).toHaveBeenCalled
-  expect(wrapper.instance().setCloudOptions).toHaveBeenCalled
+  expect(CloudApi.prototype.getCloudList).toHaveBeenCalled()
+  expect(apiCallSpy).toHaveBeenCalled()
+  expect(wrapper.instance().setCloudOptions).toHaveBeenCalled()
+  expect(wrapper.instance().setRegionOptions).toHaveBeenCalled()
+  expect(wrapper.instance().filterCloudByNameAndOrRegion).toHaveBeenCalled()
   expect(wrapper.state('clouds')).toEqual(mockClouds)
-  expect(getCurrentPositionMock).toHaveBeenCalled
+  expect(getCurrentPositionMock).toHaveBeenCalled()
+
+  apiCallSpy.mockReset()
+  apiCallSpy.mockRestore()
 })
 
 test('should show loading text when isLoading state is true', () => {
@@ -103,21 +125,22 @@ test('should render Child components', async() => {
   ]
   expect(cloudSelection.props()['label']).toEqual('Select cloud')
   expect(cloudSelection.props()['id']).toEqual('cloud')
-  // first item of the mockClouds array
-  expect(cloudSelection.props()['value']).toEqual('google')
+  expect(cloudSelection.props()['value']).toEqual('')
   expect(cloudSelection.props()['handleOnChange']).toEqual(wrapper.instance().handleCloudNameChange)
-  expect(cloudSelection.props()['options']).toEqual(expectedCloudOptions)
+  expect(cloudSelection.props()['options']).toEqual([emptyOption, ...expectedCloudOptions])
 
   const regionSelection = wrapper.find(Dropdown).at(1)
   // since region options based on select cloud name which we set default to mockClouds[0].name(google)
   const expectedRegionOptions = [
-    { value: 'europe', displayName: 'Europe' }
+    { value: mockClouds[0].geo_region, displayName: 'Europe' },
+    { value: mockClouds[1].geo_region, displayName: 'East Asia' },
+    { value: mockClouds[2].geo_region, displayName: 'North America' }
   ]
   expect(regionSelection.props()['label']).toEqual('Select region')
   expect(regionSelection.props()['id']).toEqual('region')
-  expect(regionSelection.props()['value']).toEqual(mockClouds[0].geo_region)
+  expect(regionSelection.props()['value']).toEqual('')
   expect(regionSelection.props()['handleOnChange']).toEqual(wrapper.instance().handleRegionChange)
-  expect(regionSelection.props()['options']).toEqual(expectedRegionOptions)
+  expect(regionSelection.props()['options']).toEqual([emptyOption, ...expectedRegionOptions])
 })
 
 test('should display the city selector correctly', async () => {
@@ -234,11 +257,10 @@ describe('Filter methods', () => {
 })
 
 describe('Populate the cloud options', () => {
-  test('should set cloudNameOptions state value with correct formatted data and call regionOptionsByCloudName method when setCloudOptions method is called and cloud list has more than 0 item', async () => {
+  test('should set cloudNameOptions state value with correct formatted data when setCloudOptions method is called and cloud list has more than 0 item', async () => {
     wrapper = shallow(<CloudList />)
     await wrapper.instance().componentDidMount()
     wrapper.setState({ clouds: mockClouds2 })
-    wrapper.instance().setRegionOptionsByCloudName = jest.fn()
     wrapper.instance().forceUpdate()
 
     const expectedFormat = [
@@ -248,52 +270,42 @@ describe('Populate the cloud options', () => {
     ]
     
     wrapper.instance().setCloudOptions()
-    expect(wrapper.state('cloudNameOptions')).toEqual(expectedFormat)
-    expect(wrapper.state('selectedCloud')).toEqual(expectedFormat[0].value)
-    expect(wrapper.instance().setRegionOptionsByCloudName).toHaveBeenCalledTimes(1)
+    expect(wrapper.state('cloudNameOptions')).toEqual([emptyOption, ...expectedFormat])
   })
 
-  test('should set cloudNameOptions state value with empty formatted data and not call regionOptionsByCloudName method when setCloudOptions method is called and cloud list has 0 item', () => {
+  test('should set cloudNameOptions state value with empty formatted data when setCloudOptions method is called and cloud list has 0 item', () => {
     wrapper = shallow(<CloudList />)
     wrapper.setState({ clouds: [] })
-    wrapper.instance().setRegionOptionsByCloudName = jest.fn()
     wrapper.instance().forceUpdate()
     
     wrapper.instance().setCloudOptions()
-    expect(wrapper.state('cloudNameOptions')).toEqual([{ value: '', displayName: '' }])
-    expect(wrapper.state('selectedCloud')).toEqual('')
-    expect(wrapper.instance().setRegionOptionsByCloudName).not.toHaveBeenCalledTimes(1)
+    expect(wrapper.state('cloudNameOptions')).toEqual([emptyOption])
   })
 })
 
-describe('Populate the region options based on selected cloud name', () => {
-  test('should set regionOptions state value with correct formatted data when setRegionOptionsByCloudName method is called with cloudName paased as argument', () => {
+describe('Populate the region options', () => {
+  test('should set regionOptions state value with correct formatted data when setRegionOptions method is called and cloud list has more than 0 item', () => {
     wrapper = shallow(<CloudList />)
     wrapper.setState({ clouds: mockClouds2 })
-    wrapper.instance().filterCloudByNameAndOrRegion = jest.fn()
     wrapper.instance().forceUpdate()
 
     const expectedFormat = [
-      { value: 'europe' , displayName: 'Europe' },
-      { value: 'north america' , displayName: 'North America' }
+      { value: mockClouds[0].geo_region, displayName: 'Europe' },
+      { value: mockClouds[1].geo_region, displayName: 'East Asia' },
+      { value: mockClouds[2].geo_region, displayName: 'North America' }  
     ]
     
-    wrapper.instance().setRegionOptionsByCloudName('google')
-    expect(wrapper.state('regionOptions')).toEqual(expectedFormat)
-    expect(wrapper.state('selectedRegion')).toEqual(expectedFormat[0].value)
-    expect(wrapper.instance().filterCloudByNameAndOrRegion).toHaveBeenCalledTimes(1)
+    wrapper.instance().setRegionOptions()
+    expect(wrapper.state('regionOptions')).toEqual([emptyOption, ...expectedFormat])
   })
 
-  test('should set regionOptions state value with empty formatted data when setRegionOptionsByCloudName method is called with empty string passed as argument', () => {
+  test('should set regionOptions state value with empty formatted data when setRegionOptions method is called and cloud list has 0 item', () => {
     wrapper = shallow(<CloudList />)
-    wrapper.setState({ clouds: mockClouds2 })
-    wrapper.instance().filterCloudByNameAndOrRegion = jest.fn()
+    wrapper.setState({ clouds: [] })
     wrapper.instance().forceUpdate()
     
-    wrapper.instance().setRegionOptionsByCloudName('')
-    expect(wrapper.state('regionOptions')).toEqual([{ value: '', displayName: '' }])
-    expect(wrapper.state('selectedRegion')).toEqual('')
-    expect(wrapper.instance().filterCloudByNameAndOrRegion).not.toHaveBeenCalledTimes(1)
+    wrapper.instance().setRegionOptions()
+    expect(wrapper.state('regionOptions')).toEqual([emptyOption])
   })
 })
 
@@ -334,7 +346,6 @@ describe('handle change methods', () => {
 })
 
 describe('distance calculation', () => {
-
   test('should call getDistanceFromLatLonInKm helper function when calculateDistances method is called and filteredItems state has more than 1 item in array', async () => {
     wrapper = shallow(<CloudList />)
     await wrapper.instance().componentDidMount()
@@ -343,7 +354,7 @@ describe('distance calculation', () => {
     wrapper.instance().calculateDistances()
 
     expect(calDistanceSpy).toHaveBeenCalled()
-    calDistanceSpy.mockClear()
+    calDistanceSpy.mockRestore()
   })
 
   test('should not call getDistanceFromLatLonInKm helper function when calculateDistances method is called and filteredItems state has 1 item in array', async () => {
@@ -354,7 +365,7 @@ describe('distance calculation', () => {
     wrapper.instance().calculateDistances()
 
     expect(calDistanceSpy).not.toHaveBeenCalled()
-    calDistanceSpy.mockClear()
+    calDistanceSpy.mockRestore()
   })
 
   test('should add distance propert to the returned cloud list if filteredItems state\'s length is more than 1 when calculateDistances method is called', async () => {
