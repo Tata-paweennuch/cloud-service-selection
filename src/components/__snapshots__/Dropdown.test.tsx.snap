@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should render correctly with options 1`] = `
+<div
+  className="dropdown"
+>
+  <label
+    htmlFor="month"
+  >
+    Please select
+  </label>
+  <select
+    id="month"
+    name="month"
+    onChange={[Function]}
+    value="April"
+  >
+    <option
+      value="may"
+    >
+      May
+    </option>
+    <option
+      value="june"
+    >
+      June
+    </option>
+  </select>
+</div>
+`;

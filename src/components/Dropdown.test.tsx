@@ -1,5 +1,6 @@
 import { shallow } from 'enzyme';
 import Dropdown from './Dropdown';
+import renderer from 'react-test-renderer'
 
 let wrapper: any
 let action: any
@@ -22,13 +23,17 @@ afterEach(() => {
   action.mockClear()
 })
 
+test('should render correctly with options', async () => {
+  const tree = renderer.create(<Dropdown label="Please select" id="month" value="April" handleOnChange={action} options={options}/>)
+  expect(tree.toJSON()).toMatchSnapshot()
+})
+
 test('should display select and option elements with value correctly', () => {
   expect(wrapper.find('.dropdown').exists()).toBeTruthy
   expect(wrapper.find('label').text()).toEqual('Please select')
   expect(wrapper.find('label').props()['htmlFor']).toEqual('month')
   expect(wrapper.find('select').props()['name']).toEqual('month')
   expect(wrapper.find('select').props()['id']).toEqual('month')
-  expect(wrapper.find('select').props()['onChange']).toEqual(wrapper.instance().handleValueChange)
   expect(wrapper.find('select').props()['value']).toEqual('April')
   // has 2 options
   expect(wrapper.find('option').length).toEqual(2)
@@ -38,11 +43,11 @@ test('should display select and option elements with value correctly', () => {
   expect(wrapper.find('option').at(1).props()['value']).toEqual(options[1].value)
 })
 
-test('should call handleValueChange method when selecting an option', () => {
-  wrapper.instance().handleValueChange = jest.fn()
-  wrapper.instance().forceUpdate()
-  const cloudSelect = wrapper.find('select#month')
-  cloudSelect.simulate('change', { target: { value: 'june' } })
+test('should call handleOnChange props with correct argument when selecting an option', () => {
+  wrapper.find('select').simulate('change', {
+    target: { value: 'april' }
+  })
 
-  expect(wrapper.instance().handleValueChange).toHaveBeenCalledTimes(1)
+  expect(action).toHaveBeenCalledTimes(1)
+  expect(action).toHaveBeenLastCalledWith('april')
 })

@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import React from 'react';
 import { Option } from './SharedInterface'
 
 interface DropdownProps {
@@ -9,26 +9,25 @@ interface DropdownProps {
   options: Option[]
 }
 
-class Dropdown extends Component<DropdownProps, {}> {
-  handleValueChange = (e: any) => {
-    this.props.handleOnChange(e.target.value)
+const Dropdown = (props: DropdownProps) => {
+  const {label, id, value, handleOnChange, options} = props
+
+  const handleValueChange = (e: React.SyntheticEvent) => {
+    const target  = e.target as HTMLSelectElement
+    handleOnChange(target.value)
   }
 
-  render() {
-    const { label, id, value, options } = this.props
-
-    // try to use semantic elements, so we can get the best accessibility
-    return (
-      <div className="dropdown">
-        <label htmlFor={id}>{ label }</label>
-        <select name={id} id={id} onChange={this.handleValueChange} value={value}>
-          {options.map((option, index) =>
-            <option value={option.value} key={option.value + index}>{option.displayName}</option>
-          )}
-        </select>
-      </div>  
-    )  
-  }
+  // try to use semantic elements, so we can get the best accessibility
+  return (
+    <div className="dropdown">
+      <label htmlFor={id}>{ label }</label>
+      <select name={id} id={id} onChange={handleValueChange} value={value}>
+        {options.map((option, index) =>
+          <option value={option.value} key={option.value + index}>{option.displayName}</option>
+        )}
+      </select>
+    </div>  
+  )  
 }
 
 export default Dropdown;

@@ -1,4 +1,4 @@
-import './App.css';
+import './App.scss';
 import CloudList from './components/CloudList';
 
 const App = () => {
