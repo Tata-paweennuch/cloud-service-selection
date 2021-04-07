@@ -1,7 +1,7 @@
 import ReactDOM from 'react-dom';
 import { shallow } from 'enzyme';
 import App from './App';
-import CloudList from './components/CloudList';
+import CloudListCopy from './components/CloudListCopy';
 
 test('renders without crashing', () => {
   const div = document.createElement('div')
@@ -10,5 +10,5 @@ test('renders without crashing', () => {
 
 test('should renders Child component', () => {
   const wrapper = shallow(<App />)
-  expect(wrapper.containsMatchingElement(<CloudList />)).toEqual(true)
+  expect(wrapper.containsMatchingElement(<CloudListCopy />)).toEqual(true)
 })

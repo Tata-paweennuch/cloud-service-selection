@@ -1,10 +1,10 @@
 import './App.scss';
-import CloudList from './components/CloudList';
+import CloudListCopy from './components/CloudListCopy';
 
 const App = () => {
   return (
     <div className="app">
-      <CloudList />
+      <CloudListCopy />
     </div>
   )
 }
